@@ -1,0 +1,634 @@
+---
+title: "Beginning Code"
+output: html_document
+date: "2023-10-16"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, message=FALSE, warning=FALSE}
+library(extrafont)
+library(ggrepel)
+library(ggimage)
+library(ggridges)
+library(ggtext)
+library(ggfx)
+library(geomtextpath)
+library(cropcircles)
+library(magick)
+library(glue)
+library(gt)
+library(gtExtras)
+library(vroom)
+library(nflplotR)
+library(ggplot2)
+library(nflreadr)
+library(dplyr, warn.conflicts = FALSE)
+library(espnscrapeR)
+library(ggfootball)
+library(tree)
+library(MASS)
+library(raster)
+library(tidyverse)
+```
+
+```{r}
+games <- read.csv("games.csv")
+players <- read.csv("players.csv")
+plays <- read.csv("plays.csv")
+tackles <- read.csv("tackles.csv")
+tracking_week_1 <-read.csv("tracking_week_1.csv")
+tracking_week_2 <-read.csv("tracking_week_2.csv")
+tracking_week_3 <-read.csv("tracking_week_3.csv")
+tracking_week_4 <-read.csv("tracking_week_4.csv")
+tracking_week_5 <-read.csv("tracking_week_5.csv")
+tracking_week_6 <-read.csv("tracking_week_6.csv")
+tracking_week_7 <-read.csv("tracking_week_7.csv")
+tracking_week_8 <-read.csv("tracking_week_8.csv")
+tracking_week_9 <-read.csv("tracking_week_9.csv")
+```
+
+```{r, message=FALSE, warning=FALSE}
+fourthandone <- subset(plays)
+attach(fourthandone)
+sort(table(ballCarrierDisplayName), decreasing = TRUE)[1:9]
+
+frequentcarriers <- read.csv("frequentcarriers2.csv")
+
+detach(fourthandone)
+attach(frequentcarriers)
+
+ggplot(frequentcarriers, aes(x=ballCarrierDisplayName, y=carries)) +
+  geom_col(fill="#013369", color="#D50A0A") + theme(axis.text.x = element_text(angle=45, vjust=0.55, color="#013369", face="bold")) + labs(x="Player", y="Number of Carries", title="Most Frequent Ball Carriers on 4th and 1 Plays Across the League") + geom_image(aes(image=playerPic), size=0.17) + theme(plot.title= element_text(face="bold"))
+detach(frequentcarriers)
+```
+
+
+```{r}
+fourthandone$gameandplay_id <- paste(fourthandone$gameId, fourthandone$playId, sep = "")
+tracking_week_1$gameandplay_id <- paste(tracking_week_1$gameId, tracking_week_1$playId, sep = "")
+tackles$gameandplay_id <- paste(tackles$gameId, tackles$playId, sep = "")
+check <- subset(fourthandone, gameId<2022091500)
+fourthandonetracking_week_1 <- subset(tracking_week_1, tracking_week_1$gameandplay_id %in% fourthandone$gameandplay_id)
+fourthandonetackles <- subset(tackles, tackles$gameandplay_id %in% fourthandone$gameandplay_id)
+```
+
+```{r}
+View(subset(tracking_week_1, gameId=="2022090800" & playId=="56"))
+```
+
+```{r}
+fourthandonetracking_week_1$position <- players$position[match(fourthandonetracking_week_1$nflId, players$nflId)]
+
+```
+
+```{r, message=FALSE, warning=FALSE}
+fourthandonetackles$displayName <- players$displayName[match(fourthandonetackles$nflId, players$nflId)]
+attach(fourthandonetackles)
+sort(table(displayName), decreasing = TRUE)[1:20]
+detach(fourthandonetackles)
+
+clutchtacklers <- read.csv("frequenttacklers2.csv")
+```
+
+```{r}
+attach(clutchtacklers)
+ggplot(clutchtacklers, aes(x=displayName, y=totalTackles)) +
+  geom_col(fill="#013369", color="#D50A0A") + theme(axis.text.x = element_text(angle=90, vjust=0.55, color="#013369", face="bold")) + labs(x="Player", y="Number of Tackles", title="Most 4th and 1 Tackles Across the League (Runs and Passes)") + geom_image(aes(image=playerPic), size=0.17)
+detach(clutchtacklers)
+```
+
+```{r}
+fourthandone <- fourthandone %>%
+   mutate(across(c("passResult"), ~ifelse(.=="", NA, as.character(.))))
+
+fourthandone_runs <- fourthandone
+
+fourthandone_runs_tracking_week_1 <- subset(tracking_week_1, tracking_week_1$gameandplay_id %in% fourthandone_runs$gameandplay_id)
+fourthandone_runs_tackles <- subset(tackles, tackles$gameandplay_id %in% fourthandone_runs$gameandplay_id)
+```
+
+```{r}
+fourthandone$firstdown <- ifelse(fourthandone$playResult >=fourthandone$yardsToGo, "Yes", "No")
+fourthandone_runs$firstdown <- ifelse(fourthandone_runs$playResult >= fourthandone_runs$yardsToGo, "Yes", "No")
+```
+
+```{r, message=FALSE, warning=FALSE}
+attach(fourthandone_runs_tracking_week_1)
+fourthandone_runs_tracking_week_1$coords <- paste(fourthandone_runs_tracking_week_1$x, fourthandone_runs_tracking_week_1$y, sep = ", ")
+
+test1subset <- subset(fourthandone_runs_tracking_week_1, gameId=="2022090800" & playId=="3145" & (displayName=="Dane Jackson" | displayName=="football") & event=="tackle")
+detach(fourthandone_runs_tracking_week_1)
+```
+
+```{r}
+tackletime <- subset(fourthandone_runs_tracking_week_1, (event=="tackle" | event=="out_of_bounds" | event=="fumble" | event=="qb_sack"))
+```
+
+```{r}
+tracking_week_2$gameandplay_id <- paste(tracking_week_2$gameId, tracking_week_2$playId, sep = "")
+
+fourthandonetracking_week_2 <- subset(tracking_week_2, tracking_week_2$gameandplay_id %in% fourthandone$gameandplay_id)
+
+fourthandone_runs_tracking_week_2 <- subset(tracking_week_2, tracking_week_2$gameandplay_id %in% fourthandone_runs$gameandplay_id)
+
+fourthandone_runs_tracking_week_2$coords <- paste(fourthandone_runs_tracking_week_2$x, fourthandone_runs_tracking_week_2$y, sep = ", ")
+
+tackletime2 <- subset(fourthandone_runs_tracking_week_2, (event=="tackle" | event=="out_of_bounds" | event=="fumble" | event=="qb_sack"))
+```
+
+```{r}
+tracking_week_3$gameandplay_id <- paste(tracking_week_3$gameId, tracking_week_3$playId, sep = "")
+
+fourthandonetracking_week_3 <- subset(tracking_week_3, tracking_week_3$gameandplay_id %in% fourthandone$gameandplay_id)
+
+fourthandone_runs_tracking_week_3 <- subset(tracking_week_3, tracking_week_3$gameandplay_id %in% fourthandone_runs$gameandplay_id)
+
+fourthandone_runs_tracking_week_3$coords <- paste(fourthandone_runs_tracking_week_3$x, fourthandone_runs_tracking_week_3$y, sep = ", ")
+
+tackletime3 <- subset(fourthandone_runs_tracking_week_3, (event=="tackle" | event=="out_of_bounds" | event=="fumble" | event=="qb_sack"))
+```
+
+```{r}
+tracking_week_4$gameandplay_id <- paste(tracking_week_4$gameId, tracking_week_4$playId, sep = "")
+
+fourthandonetracking_week_4 <- subset(tracking_week_4, tracking_week_4$gameandplay_id %in% fourthandone$gameandplay_id)
+
+fourthandone_runs_tracking_week_4 <- subset(tracking_week_4, tracking_week_4$gameandplay_id %in% fourthandone_runs$gameandplay_id)
+
+fourthandone_runs_tracking_week_4$coords <- paste(fourthandone_runs_tracking_week_4$x, fourthandone_runs_tracking_week_4$y, sep = ", ")
+
+tackletime4 <- subset(fourthandone_runs_tracking_week_4, (event=="tackle" | event=="out_of_bounds" | event=="fumble" | event=="qb_sack"))
+```
+
+```{r}
+tracking_week_5$gameandplay_id <- paste(tracking_week_5$gameId, tracking_week_5$playId, sep = "")
+
+fourthandonetracking_week_5 <- subset(tracking_week_5, tracking_week_5$gameandplay_id %in% fourthandone$gameandplay_id)
+
+fourthandone_runs_tracking_week_5 <- subset(tracking_week_5, tracking_week_5$gameandplay_id %in% fourthandone_runs$gameandplay_id)
+
+fourthandone_runs_tracking_week_5$coords <- paste(fourthandone_runs_tracking_week_5$x, fourthandone_runs_tracking_week_5$y, sep = ", ")
+
+tackletime5 <- subset(fourthandone_runs_tracking_week_5, (event=="tackle" | event=="out_of_bounds" | event=="fumble" | event=="qb_sack"))
+```
+
+```{r}
+tracking_week_6$gameandplay_id <- paste(tracking_week_6$gameId, tracking_week_6$playId, sep = "")
+
+fourthandonetracking_week_6 <- subset(tracking_week_6, tracking_week_6$gameandplay_id %in% fourthandone$gameandplay_id)
+
+fourthandone_runs_tracking_week_6 <- subset(tracking_week_6, tracking_week_6$gameandplay_id %in% fourthandone_runs$gameandplay_id)
+
+fourthandone_runs_tracking_week_6$coords <- paste(fourthandone_runs_tracking_week_6$x, fourthandone_runs_tracking_week_6$y, sep = ", ")
+
+tackletime6 <- subset(fourthandone_runs_tracking_week_6, (event=="tackle" | event=="out_of_bounds" | event=="fumble" | event=="qb_sack"))
+```
+
+```{r}
+tracking_week_7$gameandplay_id <- paste(tracking_week_7$gameId, tracking_week_7$playId, sep = "")
+
+fourthandonetracking_week_7 <- subset(tracking_week_7, tracking_week_7$gameandplay_id %in% fourthandone$gameandplay_id)
+
+fourthandone_runs_tracking_week_7 <- subset(tracking_week_7, tracking_week_7$gameandplay_id %in% fourthandone_runs$gameandplay_id)
+
+fourthandone_runs_tracking_week_7$coords <- paste(fourthandone_runs_tracking_week_7$x, fourthandone_runs_tracking_week_7$y, sep = ", ")
+
+tackletime7 <- subset(fourthandone_runs_tracking_week_7, (event=="tackle" | event=="out_of_bounds" | event=="fumble" | event=="qb_sack"))
+```
+
+```{r}
+tracking_week_8$gameandplay_id <- paste(tracking_week_8$gameId, tracking_week_8$playId, sep = "")
+
+fourthandonetracking_week_8 <- subset(tracking_week_8, tracking_week_8$gameandplay_id %in% fourthandone$gameandplay_id)
+
+fourthandone_runs_tracking_week_8 <- subset(tracking_week_8, tracking_week_8$gameandplay_id %in% fourthandone_runs$gameandplay_id)
+
+fourthandone_runs_tracking_week_8$coords <- paste(fourthandone_runs_tracking_week_8$x, fourthandone_runs_tracking_week_8$y, sep = ", ")
+
+tackletime8 <- subset(fourthandone_runs_tracking_week_8, (event=="tackle" | event=="out_of_bounds" | event=="fumble" | event=="qb_sack"))
+```
+
+```{r}
+tracking_week_9$gameandplay_id <- paste(tracking_week_9$gameId, tracking_week_9$playId, sep = "")
+
+fourthandonetracking_week_9 <- subset(tracking_week_9, tracking_week_9$gameandplay_id %in% fourthandone$gameandplay_id)
+
+fourthandone_runs_tracking_week_9 <- subset(tracking_week_9, tracking_week_9$gameandplay_id %in% fourthandone_runs$gameandplay_id)
+
+fourthandone_runs_tracking_week_9$coords <- paste(fourthandone_runs_tracking_week_9$x, fourthandone_runs_tracking_week_9$y, sep = ", ")
+
+tackletime9 <- subset(fourthandone_runs_tracking_week_9, (event=="tackle" | event=="out_of_bounds" | event=="fumble" | event=="qb_sack"))
+```
+
+```{r}
+alltackletime <- rbind(tackletime, tackletime2, tackletime3, tackletime4, tackletime5, tackletime6, tackletime7, tackletime8, tackletime9)
+```
+
+```{r}
+tacklegamesplit <- split(alltackletime, alltackletime$gameandplay_id)
+```
+
+```{r}
+alltackletime$position <- players$position[match(alltackletime$nflId, players$nflId)]
+```
+
+```{r}
+alltackletime <- subset(alltackletime, (position=="OLB"|position=="SS"|position=="FS"|position=="DT"|position=="DE"|position=="ILB"|position=="CB"|club=="football"|position=="MLB"|position=="DB"))
+```
+
+```{r}
+alltackletime$madetackle <- tackles$tackle[match(interaction(alltackletime$nflId, alltackletime$gameandplay_id), interaction(tackles$nflId, tackles$gameandplay_id))]
+```
+
+```{r}
+alltackletime$madeassist <- tackles$assist[match(interaction(alltackletime$nflId, alltackletime$gameandplay_id), interaction(tackles$nflId, tackles$gameandplay_id))]
+```
+
+```{r}
+alltackletime$missedtackle <- tackles$assist[match(interaction(alltackletime$nflId, alltackletime$gameandplay_id), interaction(tackles$nflId, tackles$gameandplay_id))]
+```
+
+```{r,message=FALSE, warning=FALSE}
+attach(alltackletime)
+
+alltackletime_football<- subset(alltackletime, displayName=="football")
+
+alltackletime$footballx <- alltackletime_football$x[match(alltackletime$gameandplay_id, alltackletime_football$gameandplay_id)]
+
+alltackletime$footbally <- alltackletime_football$y[match(alltackletime$gameandplay_id, alltackletime_football$gameandplay_id)]
+
+alltackletime <- alltackletime[!is.na(alltackletime$footballx),]
+
+alltackletime <- alltackletime[!is.na(alltackletime$footbally),]
+
+alltackletime$epa <- fourthandone$expectedPointsAdded[match(alltackletime$gameandplay_id, fourthandone$gameandplay_id)]
+
+alltackletime$epa <- (-(alltackletime$epa))+6
+
+alltackletime <- alltackletime[!is.na(alltackletime$epa),]
+
+detach(alltackletime)
+```
+
+```{r, message=FALSE, warning=FALSE}
+attach(alltackletime)
+alltackletime$disttofootball <- sqrt(((x-footballx)^2)+((y-footbally)^2))
+detach(alltackletime)
+```
+
+```{r}
+alltackletime$effect <- epa/disttofootball
+```
+
+```{r, message=FALSE, warning=FALSE}
+attach(alltackletime)
+
+alltackletime_avgdistxepa <- alltackletime %>% 
+  group_by(nflId) %>%
+    mutate(averagedistxepa=mean(effect))
+
+alltackletime_avgdistxepa$playvalue = 1
+
+alltackletime_avgdistxepa$madetackle[is.na(alltackletime_avgdistxepa$madetackle)] <- 0
+
+alltackletime_avgdistxepa$madeassist[is.na(alltackletime_avgdistxepa$madeassist)] <- 0
+```
+
+```{r, message=FALSE, warning=FALSE}
+attach(alltackletime_avgdistxepa)
+alltackletime_tacklesperplay <- alltackletime_avgdistxepa %>% 
+  group_by(nflId) %>%
+    summarize(tacklesperplay=(sum(madetackle)+((sum(madeassist))*0.5))/sum(playvalue))
+
+#alltackletime_tacklesperplay$tacklesperplay[is.na(alltackletime_tacklesperplay$tacklesperplay)] <- 0
+```
+
+
+```{r, message=FALSE, warning=FALSE}
+finaldata <- alltackletime_tacklesperplay
+attach(finaldata)
+finaldata$effect = alltackletime_avgdistxepa$averagedistxepa[match(finaldata$nflId, alltackletime_avgdistxepa$nflId)]
+
+finaldata$displayName = players$displayName[match(finaldata$nflId, players$nflId)]
+
+finaldata = finaldata[order(-finaldata$effect),]
+
+View(finaldata)
+```
+
+```{r}
+snapcount2022 <- read.csv("snapcount2022.csv")
+```
+
+```{r}
+snapcount <- subset(snapcount2022, snapcount2022$AVG>=0.5)
+```
+
+```{r}
+finalanalysis <- subset(finaldata, finaldata$displayName %in% snapcount$Player)
+```
+
+```{r, message=FALSE, warning=FALSE}
+attach(finalanalysis)
+finalanalysis$tackleeffect <- effect*tacklesperplay
+detach(finalanalysis)
+```
+
+```{r}
+finalanalysis = finalanalysis[order(-finalanalysis$tackleeffect),]
+
+finalanalysis$position <- players$position[match(finalanalysis$nflId, players$nflId)]
+
+finalanalysis$tackleeffect <- finalanalysis$tackleeffect*100
+```
+
+```{r}
+overalltable <- finalanalysis
+```
+
+```{r, message=FALSE, warning=FALSE}
+attach(overalltable)
+overalltable <- subset(overalltable, tackleeffect>=0.6053)
+overalltable <- overalltable[order(-tackleeffect),]
+leaderstab<- overalltable %>%
+  gt(rowname_col = "displayName") %>%
+  cols_hide(columns= c(nflId, tacklesperplay, effect))%>%
+  tab_header(
+    title = md("**Overall NFL Tackle Effect Leaders 2022**")) %>%
+  tab_stubhead(label = "Name") %>%
+  #gt_img_rows(geom_nfl_headshots(), height = 25) %>%
+  cols_label(
+    displayName = "Name",
+    #ProfPic = "",
+    position = "Position",
+    tackleeffect = "Tackle Effect") %>%
+  cols_move_to_start(
+    columns = c(displayName, position, tackleeffect)) %>%
+  cols_align(align = "center", columns = c("position")) %>%
+  cols_align(align = "left", columns = c("tackleeffect")) %>%
+  gt_color_box(tackleeffect, domain = 0:120,
+               palette = "ggsci::cyan_material", accuracy = 0.01, align="center") %>%
+  gtExtras::gt_theme_espn()
+detach(overalltable)
+```
+
+```{r, message=FALSE, warning=FALSE}
+attach(finalanalysis)
+diffpositions <- finalanalysis %>% 
+  group_by(position) %>%
+    summarize(avgtackleeffect = mean(tackleeffect))
+detach(finalanalysis)
+diffpositions <- diffpositions[order(-diffpositions$avgtackleeffect),]
+```
+
+```{r, message=FALSE, warning=FALSE}
+attach(diffpositions)
+positionstab <- diffpositions %>%
+  gt(rowname_col = "position") %>%
+  tab_header(
+    title = md("**2022 Avg Tackle Effect by Position**")) %>%
+  tab_stubhead(label = "position") %>%
+  cols_label(
+    position = "position",
+    avgtackleeffect = "avgtackleeffect") %>%
+  cols_move_to_start(
+    columns = c(avgtackleeffect)) %>%
+  cols_align(align = "left", columns = c("avgtackleeffect")) %>%
+  gt_color_box(avgtackleeffect, domain = 1:55,
+               palette = "ggsci::indigo_material", accuracy = 0.001, align="center") %>%
+  gtExtras::gt_theme_espn()
+detach(diffpositions)
+```
+
+```{r}
+ilbfinal <- subset(finalanalysis, position=="ILB")
+mlbfinal <- subset(finalanalysis, position=="MLB")
+olbfinal <- subset(finalanalysis, position=="OLB")
+ssfinal <- subset(finalanalysis, position=="SS")
+fsfinal <- subset(finalanalysis, position=="FS")
+cbfinal <- subset(finalanalysis, position=="CB")
+dtfinal <- subset(finalanalysis, position=="DT")
+definal <- subset(finalanalysis, position=="DE")
+```
+
+```{r, message=FALSE, warning=FALSE}
+attach(ilbfinal)
+ilbfinal <- ilbfinal[order(-tackleeffect),]
+ilbtab<- ilbfinal %>%
+  gt(rowname_col = "displayName") %>%
+  cols_hide(columns= c(nflId, tacklesperplay, effect))%>%
+  tab_header(
+    title = md("**ILB Tackle Effect Leaders 2022**")) %>%
+  tab_stubhead(label = "Name") %>%
+  #gt_img_rows(geom_nfl_headshots(), height = 25) %>%
+  cols_label(
+    displayName = "Name",
+    #ProfPic = "",
+    position = "Position",
+    tackleeffect = "Tackle Effect") %>%
+  cols_move_to_start(
+    columns = c(displayName, position, tackleeffect)) %>%
+  cols_align(align = "center", columns = c("position")) %>%
+  cols_align(align = "left", columns = c("tackleeffect")) %>%
+  gt_color_box(tackleeffect, domain = 0:120,
+               palette = "ggsci::blue_material", accuracy = 0.01, align="center") %>%
+  gtExtras::gt_theme_espn()
+detach(ilbfinal)
+```
+
+```{r, message=FALSE, warning=FALSE}
+attach(olbfinal)
+olbfinal <- olbfinal[order(-tackleeffect),]
+olbtab<- olbfinal %>%
+  gt(rowname_col = "displayName") %>%
+  cols_hide(columns= c(nflId, tacklesperplay, effect))%>%
+  tab_header(
+    title = md("**OLB Tackle Effect Leaders 2022**")) %>%
+  tab_stubhead(label = "Name") %>%
+  #gt_img_rows(geom_nfl_headshots(), height = 25) %>%
+  cols_label(
+    displayName = "Name",
+    #ProfPic = "",
+    position = "Position",
+    tackleeffect = "Tackle Effect") %>%
+  cols_move_to_start(
+    columns = c(displayName, position, tackleeffect)) %>%
+  cols_align(align = "center", columns = c("position")) %>%
+  cols_align(align = "left", columns = c("tackleeffect")) %>%
+  gt_color_box(tackleeffect, domain = 0:120,
+               palette = "ggsci::teal_material", accuracy = 0.01, align="center") %>%
+  gtExtras::gt_theme_espn()
+detach(olbfinal)
+```
+
+```{r, message=FALSE, warning=FALSE}
+attach(mlbfinal)
+mlbfinal <- mlbfinal[order(-tackleeffect),]
+mlbtab<- mlbfinal %>%
+  gt(rowname_col = "displayName") %>%
+  cols_hide(columns= c(nflId, tacklesperplay, effect))%>%
+  tab_header(
+    title = md("**MLB Tackle Effect Leaders 2022**")) %>%
+  tab_stubhead(label = "Name") %>%
+  #gt_img_rows(geom_nfl_headshots(), height = 25) %>%
+  cols_label(
+    displayName = "Name",
+    #ProfPic = "",
+    position = "Position",
+    tackleeffect = "Tackle Effect") %>%
+  cols_move_to_start(
+    columns = c(displayName, position, tackleeffect)) %>%
+  cols_align(align = "center", columns = c("position")) %>%
+  cols_align(align = "left", columns = c("tackleeffect")) %>%
+  gt_color_box(tackleeffect, domain = 0:120,
+               palette = "ggsci::green_material", accuracy = 0.01, align="center") %>%
+  gtExtras::gt_theme_espn()
+detach(mlbfinal)
+```
+
+```{r, message=FALSE, warning=FALSE}
+attach(ssfinal)
+ssfinal <- ssfinal[order(-tackleeffect),]
+sstab<- ssfinal %>%
+  gt(rowname_col = "displayName") %>%
+  cols_hide(columns= c(nflId, tacklesperplay, effect))%>%
+  tab_header(
+    title = md("**SS Tackle Effect Leaders 2022**")) %>%
+  tab_stubhead(label = "Name") %>%
+  #gt_img_rows(geom_nfl_headshots(), height = 25) %>%
+  cols_label(
+    displayName = "Name",
+    #ProfPic = "",
+    position = "Position",
+    tackleeffect = "Tackle Effect") %>%
+  cols_move_to_start(
+    columns = c(displayName, position, tackleeffect)) %>%
+  cols_align(align = "center", columns = c("position")) %>%
+  cols_align(align = "left", columns = c("tackleeffect")) %>%
+  gt_color_box(tackleeffect, domain = 0:120,
+               palette = "ggsci::yellow_material", accuracy = 0.01, align="center") %>%
+  gtExtras::gt_theme_espn()
+detach(ssfinal)
+```
+
+```{r, message=FALSE, warning=FALSE}
+attach(fsfinal)
+fsfinal <- fsfinal[order(-tackleeffect),]
+fstab<- fsfinal %>%
+  gt(rowname_col = "displayName") %>%
+  cols_hide(columns= c(nflId, tacklesperplay, effect))%>%
+  tab_header(
+    title = md("**FS Tackle Effect Leaders 2022**")) %>%
+  tab_stubhead(label = "Name") %>%
+  #gt_img_rows(geom_nfl_headshots(), height = 25) %>%
+  cols_label(
+    displayName = "Name",
+    #ProfPic = "",
+    position = "Position",
+    tackleeffect = "Tackle Effect") %>%
+  cols_move_to_start(
+    columns = c(displayName, position, tackleeffect)) %>%
+  cols_align(align = "center", columns = c("position")) %>%
+  cols_align(align = "left", columns = c("tackleeffect")) %>%
+  gt_color_box(tackleeffect, domain = 0:120,
+               palette = "ggsci::orange_material", accuracy = 0.01, align="center") %>%
+  gtExtras::gt_theme_espn()
+detach(fsfinal)
+```
+
+```{r, message=FALSE, warning=FALSE}
+attach(cbfinal)
+cbfinal <- cbfinal[order(-tackleeffect),]
+cbtab<- cbfinal %>%
+  gt(rowname_col = "displayName") %>%
+  cols_hide(columns= c(nflId, tacklesperplay, effect))%>%
+  tab_header(
+    title = md("**CB Tackle Effect Leaders 2022**")) %>%
+  tab_stubhead(label = "Name") %>%
+  #gt_img_rows(geom_nfl_headshots(), height = 25) %>%
+  cols_label(
+    displayName = "Name",
+    #ProfPic = "",
+    position = "Position",
+    tackleeffect = "Tackle Effect") %>%
+  cols_move_to_start(
+    columns = c(displayName, position, tackleeffect)) %>%
+  cols_align(align = "center", columns = c("position")) %>%
+  cols_align(align = "left", columns = c("tackleeffect")) %>%
+  gt_color_box(tackleeffect, domain = 0:120,
+               palette = "ggsci::red_material", accuracy = 0.01, align="center") %>%
+  gtExtras::gt_theme_espn()
+detach(cbfinal)
+```
+
+```{r, message=FALSE, warning=FALSE}
+attach(definal)
+definal <- definal[order(-tackleeffect),]
+detab<- definal %>%
+  gt(rowname_col = "displayName") %>%
+  cols_hide(columns= c(nflId, tacklesperplay, effect))%>%
+  tab_header(
+    title = md("**DE Tackle Effect Leaders 2022**")) %>%
+  tab_stubhead(label = "Name") %>%
+  #gt_img_rows(geom_nfl_headshots(), height = 25) %>%
+  cols_label(
+    displayName = "Name",
+    #ProfPic = "",
+    position = "Position",
+    tackleeffect = "Tackle Effect") %>%
+  cols_move_to_start(
+    columns = c(displayName, position, tackleeffect)) %>%
+  cols_align(align = "center", columns = c("position")) %>%
+  cols_align(align = "left", columns = c("tackleeffect")) %>%
+  gt_color_box(tackleeffect, domain = 0:120,
+               palette = "ggsci::pink_material", accuracy = 0.01, align="center") %>%
+  gtExtras::gt_theme_espn()
+detach(definal)
+```
+
+```{r, message=FALSE, warning=FALSE}
+attach(dtfinal)
+dtfinal <- dtfinal[order(-tackleeffect),]
+dttab<- dtfinal %>%
+  gt(rowname_col = "displayName") %>%
+  cols_hide(columns= c(nflId, tacklesperplay, effect))%>%
+  tab_header(
+    title = md("**DT Tackle Effect Leaders 2022**")) %>%
+  tab_stubhead(label = "Name") %>%
+  #gt_img_rows(geom_nfl_headshots(), height = 25) %>%
+  cols_label(
+    displayName = "Name",
+    #ProfPic = "",
+    position = "Position",
+    tackleeffect = "Tackle Effect") %>%
+  cols_move_to_start(
+    columns = c(displayName, position, tackleeffect)) %>%
+  cols_align(align = "center", columns = c("position")) %>%
+  cols_align(align = "left", columns = c("tackleeffect")) %>%
+  gt_color_box(tackleeffect, domain = 0:120,
+               palette = "ggsci::light_green_material", accuracy = 0.01, align="center") %>%
+  gtExtras::gt_theme_espn()
+detach(dtfinal)
+```
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
